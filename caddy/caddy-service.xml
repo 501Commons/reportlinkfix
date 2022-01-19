@@ -1,0 +1,12 @@
+<service>
+  <id>caddy</id>
+  <!-- Display name of the service -->
+  <name>Caddy Web Server (powered by WinSW)</name>
+  <!-- Service description -->
+  <description>Caddy Web Server (https://caddyserver.com/)</description>
+  <executable>%BASE%\caddy.exe</executable>
+  <arguments>run</arguments>
+  <log mode="roll-by-time">
+    <pattern>yyyy-MM-dd</pattern>
+  </log>
+</service>

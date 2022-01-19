@@ -1,0 +1,37 @@
+# This is a authentication workaround for the N-Able Report Manager
+# The Report Manager is supposed to be able to accept a SessionID via POST for authentication from N-Central, but it doesn't work
+# The workaround is to get the SessionID from the POST request, put the SessionID in a URL, then send a redirect to that new URL
+# Caddy checks if a POST request going to /ReportInterface/Pages/menu.aspx has both a DataSourceID query and if the request body contains a SessionID
+# It grabs that SessionID using a regular expression and maps that to a variable that can then be used to construct the redirect URL
+# Also needs to redirect requests to the SQL Server Reporting Services
+# Using https://github.com/winsw/winsw/ to start as a service
+# https://caddyserver.com/docs/caddyfile
+# https://caddyserver.com/docs/caddyfile/options
+{
+	admin off
+	auto_https off
+}
+# https://caddyserver.com/docs/caddyfile/concepts#addresses
+http://501c-reportmgr.npowerseattle.lan, http://501c-reportmgr {
+	# https://caddyserver.com/docs/caddyfile/matchers
+	@postredir {
+		path /ReportInterface/Pages/menu.aspx
+		query DataSourceID=1
+		method POST
+		expression {http.request.body}.contains("SessionID")
+	}
+	# https://caddyserver.com/docs/caddyfile/directives/handle
+	handle @postredir {
+		# https://caddyserver.com/docs/caddyfile/directives/map
+		map {http.request.body} {reqbody} {
+			~.*SessionID=([0-9]+) "${1}"
+			default "0123456789"
+		}
+		# https://caddyserver.com/docs/caddyfile/directives/redir
+		redir http://501c-reportmgr.npowerseattle.lan/ReportInterface/Pages/menu.aspx?SessionID={reqbody}&DataSourceID=1
+	}
+	# https://caddyserver.com/docs/caddyfile/directives/reverse_proxy
+	reverse_proxy /ReportServer/* 501c-reportmgr:8484
+	reverse_proxy /Reports/* 501c-reportmgr:8484
+	reverse_proxy 501c-reportmgr:8383
+}
